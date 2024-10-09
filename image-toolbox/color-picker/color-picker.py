@@ -3,13 +3,14 @@ import pystray
 from pystray import MenuItem as item
 from PIL import Image, ImageDraw
 import tkinter as tk
-from ctypes import windll
-import time
+from ctypes import windll, wintypes
+from rich import print 
 
 # マウスの位置を取得
 def get_mouse_position():
-    pt = ctypes.wintypes.POINT()
+    pt = wintypes.POINT()
     windll.user32.GetCursorPos(ctypes.byref(pt))
+    print(pt.x, pt.y)
     return pt.x, pt.y
 
 # 指定した位置のピクセル色を取得
@@ -39,6 +40,7 @@ def color_picker_window():
 
 # システムトレイアイコンの設定
 def setup_tray():
+    ctypes.windll.user32.SetProcessDPIAware()
     icon_image = Image.new('RGB', (64, 64), color=(73, 109, 137))
     draw = ImageDraw.Draw(icon_image)
     draw.rectangle([16, 16, 48, 48], fill=(255, 255, 255))
