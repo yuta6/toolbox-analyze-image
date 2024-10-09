@@ -1,14 +1,14 @@
+from concurrent.futures import ThreadPoolExecutor
+import tkinter as tk
 import ctypes
+import threading
+
 import pystray
 from pystray import MenuItem as item
 from PIL import Image, ImageDraw
-import tkinter as tk
-from ctypes import windll, wintypes
 from rich import print
-import sys
-import os
-from concurrent.futures import ThreadPoolExecutor
-import threading
+import keyboard
+import pyperclip
 
 # Pointクラスの定義
 class Point:
@@ -18,12 +18,12 @@ class Point:
 
     @classmethod
     def get_mouse_position(cls):
-        pt = wintypes.POINT()
-        windll.user32.GetCursorPos(ctypes.byref(pt))
+        pt = ctypes.wintypes.POINT()
+        ctypes.windll.user32.GetCursorPos(ctypes.byref(pt))
         print(pt.x, pt.y)
         return cls(pt.x, pt.y)
     
-    def __str__(self) :
+    def __str__(self):
         return f"({self.x},{self.y})"
 
 # Colorクラスの定義
@@ -35,9 +35,9 @@ class Color:
 
     @classmethod
     def get_color_at_position(cls, x, y):
-        hdc = windll.user32.GetDC(0)
-        color = windll.gdi32.GetPixel(hdc, x, y)
-        windll.user32.ReleaseDC(0, hdc)
+        hdc = ctypes.windll.user32.GetDC(0)
+        color = ctypes.windll.gdi32.GetPixel(hdc, x, y)
+        ctypes.windll.user32.ReleaseDC(0, hdc)
         return cls((color & 0xFF), ((color >> 8) & 0xFF), ((color >> 16) & 0xFF))
 
     def to_hex(self):
@@ -56,8 +56,8 @@ class Color:
 def color_picker_window(stop_event):
     root = tk.Tk()
     root.geometry("160x32")  # 長方形のウィンドウサイズに変更
-    root.overrideredirect(True) # ウィンドウのデフォルトのタイトルバーや枠を削除
-    root.attributes("-topmost", True) # ウィンドウを常に最前面に
+    root.overrideredirect(True)  # ウィンドウのデフォルトのタイトルバーや枠を削除
+    root.attributes("-topmost", True)  # ウィンドウを常に最前面に
 
     label = tk.Label(root, text="", font=("Helvetica", 8))
     label.place(relx=0.5, rely=0.5, anchor="center")
@@ -78,6 +78,15 @@ def color_picker_window(stop_event):
         )
         root.after(100, update_color)
 
+    # F1キーで座標と色をクリップボードに保存
+    def copy_to_clipboard():
+        point = Point.get_mouse_position()
+        color = Color.get_color_at_position(point.x, point.y)
+        clipboard_text = f"Position: {point}, Color: {color.to_hex()} ({color})"
+        pyperclip.copy(clipboard_text)
+        print(f"Copied to clipboard: {clipboard_text}")
+
+    keyboard.add_hotkey('f1', copy_to_clipboard)
     update_color()
     root.mainloop()
 
