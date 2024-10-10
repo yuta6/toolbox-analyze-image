@@ -6,6 +6,7 @@ import cv2
 import keyboard
 
 from pathlib import Path
+import argparse
 
 class Point(NamedTuple):
     x: int
@@ -27,13 +28,13 @@ class CaptureRegion:
             s.center.y + radius   # 下
         )
 
-def save_capture(np_image):
+def save_capture(np_image, directory: Path):
     base_filename = 'pic'
     file_extension = '.png'
     index = 1  # 初期値
 
     # 保存先ディレクトリを指定
-    directory = Path('.') / "output"  # カレントディレクトリをPathオブジェクトで指定
+    directory = Path('.') / directory  # カレントディレクトリをPathオブジェクトで指定
     if not directory.exists():
         directory.mkdir()
 
@@ -46,11 +47,11 @@ def save_capture(np_image):
     success = cv2.imwrite(str(path), np_image)
     return  str(path) if success else None
 
-def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion):
+def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: Path):
     t1 = time.time()
     capture_nparray = camera.grab(region=region.tup) if region else camera.grab()
     t2 = time.time()
-    filename = save_capture(capture_nparray)
+    filename = save_capture(capture_nparray, directory)
     t3 = time.time()
     print("処理時間: {:2f} ms + {:2f} ms = {:2f} ms".format((t2 - t1) * 1000, (t3 - t2) * 1000, (t3 - t1) * 1000))
     print(
@@ -62,11 +63,19 @@ def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion):
 def main():
     print("F1キーでスクリーンショットを保存します。ENDキーで終了します。")
 
+    parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
+    parser.add_argument("save_directory", type=str, nargs="?", default="output", help="スクリーンショットの保存先ディレクトリ")
+    parser.add_argument("-r", "--radius", type=int, default=0, help="キャプチャ領域の半径を指定")
+    args = parser.parse_args()
+
+    directory = Path(args.save_directory)
+    radius = args.radius
+    
     camera = dxcam.create(output_color="BGR")
-    region = CaptureRegion(480)  # 半径480のキャプチャ領域を指定
+    region = CaptureRegion(radius) if radius > 0 else None  # 半径480のキャプチャ領域を指定
 
     # ホットキーの設定
-    keyboard.add_hotkey('f1', capture_and_save, args=(camera, region))
+    keyboard.add_hotkey('f1', capture_and_save, args=(camera, region, directory))
     keyboard.wait('end')
 
     print("終了します")
