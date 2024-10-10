@@ -12,6 +12,7 @@ class Point(NamedTuple):
     x: int
     y: int
 
+
 class ScreenSize: 
     def __init__(self):
         self.width = int(ctypes.windll.user32.GetSystemMetrics(0))  
@@ -19,18 +20,17 @@ class ScreenSize:
         self.center = Point(self.width // 2, self.height // 2)
 
 class CaptureRegion:
-    def __init__(self, radius):
+    def __init__(self, region : Point):
         s = ScreenSize()
         self.tup = (
-            s.center.x - radius,  # 左
-            s.center.y - radius,  # 上
-            s.center.x + radius,  # 右
-            s.center.y + radius   # 下
+            s.center.x - region.x//2,  # 左
+            s.center.y - region.y//2,  # 上
+            s.center.x + region.x//2,  # 右
+            s.center.y + region.y//2   # 下
         )
 
-def save_capture(np_image, directory: Path):
+def save_capture(np_image, directory: Path, extension: str = 'png'):
     base_filename = 'pic'
-    file_extension = '.png'
     index = 1  # 初期値
 
     # 保存先ディレクトリを指定
@@ -38,16 +38,16 @@ def save_capture(np_image, directory: Path):
     if not directory.exists():
         directory.mkdir()
 
-    path = directory / f'{base_filename}{index}{file_extension}'
+    path = directory / f'{base_filename}{index}.{extension}'
     while path.exists():
         index += 1
-        path = directory / f'{base_filename}{index}{file_extension}'
+        path = directory / f'{base_filename}{index}.{extension}'
     
     # 画像を保存
     success = cv2.imwrite(str(path), np_image)
     return  str(path) if success else None
 
-def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: Path):
+def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: Path, extension: str = 'png'):
     t1 = time.time()
     capture_nparray = camera.grab(region=region.tup) if region else camera.grab()
     if capture_nparray is None:
@@ -55,7 +55,7 @@ def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: 
         return
 
     t2 = time.time()
-    filename = save_capture(capture_nparray, directory)
+    filename = save_capture(capture_nparray, directory, extension)
     t3 = time.time()
     print("処理時間: {:2f} ms + {:2f} ms = {:2f} ms".format((t2 - t1) * 1000, (t3 - t2) * 1000, (t3 - t1) * 1000))
     print(
@@ -63,23 +63,40 @@ def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: 
         if filename else "保存に失敗しました。"
     ) 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
+    parser.add_argument("save_directory", type=str, nargs="?", default="output", help="スクリーンショットの保存先ディレクトリ")
+    parser.add_argument("-r", "--region", type=int, nargs="*", help="キャプチャ領域の幅と高さを指定")
+    parser.add_argument("-ex", "--extension", type=str, default="png", help="拡張子")
+    args = parser.parse_args()
+
+    # ディレクトリの設定
+    directory = Path(args.save_directory)
+
+    # キャプチャ領域の処理
+    match args.region:
+        case None:
+            region = None
+        case [value1]:
+            region = Point(value1, value1)
+        case [value1, value2]:
+            region = Point(value1, value2)
+        case _:
+            raise ValueError("キャプチャ領域は1つまたは2つの値を指定してください")
+
+    # 結果を返す
+    return directory, region, args.extension
+
 
 def main():
     print("Altキーでスクリーンショットを保存します。ENDキーで終了します。")
 
-    parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
-    parser.add_argument("save_directory", type=str, nargs="?", default="output", help="スクリーンショットの保存先ディレクトリ")
-    parser.add_argument("-r", "--radius", type=int, default=0, help="キャプチャ領域の半径を指定")
-    args = parser.parse_args()
+    directory, region, extension = parse_arguments()
 
-    directory = Path(args.save_directory)
-    radius = args.radius
-    
     camera = dxcam.create(output_color="BGR")
-    region = CaptureRegion(radius) if radius > 0 else None  # 半径480のキャプチャ領域を指定
+    region = CaptureRegion(region) if region else None
 
-    # ホットキーの設定
-    keyboard.add_hotkey('alt', capture_and_save, args=(camera, region, directory))
+    keyboard.add_hotkey('alt', capture_and_save, args=(camera, region, directory, extension))
     keyboard.wait('end')
 
     print("終了します")
