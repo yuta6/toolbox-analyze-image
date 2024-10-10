@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw
 from rich import print
 import keyboard
 import pyperclip
+import cv2
+import numpy
 
 # Pointクラスの定義
 class Point:
@@ -51,6 +53,17 @@ class Color:
 
     def __str__(self):
         return f"R: {self.r}, G: {self.g}, B: {self.b}"
+    
+    @property
+    def rgb_np(self):
+        return numpy.array([self.r, self.g, self.b])
+
+    @property
+    def hsv_np(self):
+        # NumPyの配列に変換（OpenCVはBGR形式を使用するため、順序を変換）
+        rgb_array = numpy.uint8([[self.rgb_np()[::-1]]])  # BGRに並べ替え
+        hsv_array = cv2.cvtColor(rgb_array, cv2.COLOR_BGR2HSV)
+        return hsv_array[0][0]  # 結果を1次元配列として返す
 
 # カラーピッカーの表示用ウィンドウ
 def color_picker_window(stop_event):
@@ -82,7 +95,7 @@ def color_picker_window(stop_event):
     def copy_to_clipboard():
         point = Point.get_mouse_position()
         color = Color.get_color_at_position(point.x, point.y)
-        clipboard_text = f"Position: {point}, Color: {color.to_hex()} ({color})"
+        clipboard_text = f"Position: {point}, Color: {color.to_hex()} ({color}, HSV: {color.hsv_np})"
         pyperclip.copy(clipboard_text)
         print(f"Copied to clipboard: {clipboard_text}")
 
