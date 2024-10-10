@@ -50,18 +50,22 @@ def save_capture(np_image, directory: Path):
 def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: Path):
     t1 = time.time()
     capture_nparray = camera.grab(region=region.tup) if region else camera.grab()
+    if capture_nparray is None:
+        print("キャプチャに失敗しました。")
+        return
+
     t2 = time.time()
     filename = save_capture(capture_nparray, directory)
     t3 = time.time()
     print("処理時間: {:2f} ms + {:2f} ms = {:2f} ms".format((t2 - t1) * 1000, (t3 - t2) * 1000, (t3 - t1) * 1000))
     print(
         "スクリーンショットをとりました。ファイル名:{}".format(filename) 
-        if filename else "キャプチャーに失敗しました。"
+        if filename else "保存に失敗しました。"
     ) 
 
 
 def main():
-    print("F1キーでスクリーンショットを保存します。ENDキーで終了します。")
+    print("Altキーでスクリーンショットを保存します。ENDキーで終了します。")
 
     parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
     parser.add_argument("save_directory", type=str, nargs="?", default="output", help="スクリーンショットの保存先ディレクトリ")
@@ -75,7 +79,7 @@ def main():
     region = CaptureRegion(radius) if radius > 0 else None  # 半径480のキャプチャ領域を指定
 
     # ホットキーの設定
-    keyboard.add_hotkey('f1', capture_and_save, args=(camera, region, directory))
+    keyboard.add_hotkey('alt', capture_and_save, args=(camera, region, directory))
     keyboard.wait('end')
 
     print("終了します")
