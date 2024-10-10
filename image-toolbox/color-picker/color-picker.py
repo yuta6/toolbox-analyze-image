@@ -11,6 +11,7 @@ import keyboard
 import pyperclip
 import cv2
 import numpy
+import dxcam
 
 # Pointクラスの定義
 class Point:
@@ -22,34 +23,25 @@ class Point:
     def get_mouse_position(cls):
         pt = ctypes.wintypes.POINT()
         ctypes.windll.user32.GetCursorPos(ctypes.byref(pt))
-        print(pt.x, pt.y)
         return cls(pt.x, pt.y)
     
     def __str__(self):
         return f"({self.x},{self.y})"
 
-# Colorクラスの定義
 class Color:
     def __init__(self, r=0, g=0, b=0):
         self.r = r
         self.g = g
         self.b = b
 
-    @classmethod
-    def get_color_at_position(cls, x, y):
-        hdc = ctypes.windll.user32.GetDC(0)
-        color = ctypes.windll.gdi32.GetPixel(hdc, x, y)
-        ctypes.windll.user32.ReleaseDC(0, hdc)
-        return cls((color & 0xFF), ((color >> 8) & 0xFF), ((color >> 16) & 0xFF))
-
     def to_hex(self):
         return '#%02x%02x%02x' % (self.r, self.g, self.b)
 
     def is_dark(self):
-        # 明るさを R^2 + G^2 + B^2 で判定する
-        brightness = self.r**2 + self.g**2 + self.b**2
-        threshold = (128**2) * 3  # 128 の 2 乗を 3 色分の合計
-        return brightness < threshold
+        # 輝度の計算
+        luminance = 0.299 * self.r + 0.587 * self.g + 0.114 * self.b
+        threshold = 128  # 輝度の閾値
+        return luminance < threshold
 
     def __str__(self):
         return f"R: {self.r}, G: {self.g}, B: {self.b}"
@@ -61,19 +53,52 @@ class Color:
     @property
     def hsv_np(self):
         # NumPyの配列に変換（OpenCVはBGR形式を使用するため、順序を変換）
-        rgb_array = numpy.uint8([[self.rgb_np()[::-1]]])  # BGRに並べ替え
+        rgb_array = numpy.uint8([[self.rgb_np[::-1]]])
         hsv_array = cv2.cvtColor(rgb_array, cv2.COLOR_BGR2HSV)
-        return hsv_array[0][0]  # 結果を1次元配列として返す
+        return str(hsv_array[0][0]) 
+    
+class Picker:
+    def __init__(self, method="api"):
+        if method not in ("api", "dxcam"):
+            raise ValueError(f"Invalid method: {method}. Use 'api' or 'dxcam'.")
+        
+        self.method = method
+        self.camera = dxcam.create(output_color="RGB") if method == "dxcam" else None
 
+    def _get_color_api(self, point):
+        hdc = ctypes.windll.user32.GetDC(0)
+        color = ctypes.windll.gdi32.GetPixel(hdc, point.x, point.y)
+        ctypes.windll.user32.ReleaseDC(0, hdc)
+        return Color((color & 0xFF), ((color >> 8) & 0xFF), ((color >> 16) & 0xFF))
+
+    def _get_color_dx(self, point):
+        frame = self.camera.grab()  # スクリーン全体のフレームをキャプチャ
+        if frame is None:
+            return Color(0, 0, 0)
+        r, g, b = frame[point.y, point.x]  # 特定の座標からRGB値を取得
+        return Color(r, g, b)
+
+    def pick_color_on(self, point=None):
+        if point is None:
+            point = Point.get_mouse_position()
+
+        match self.method: 
+            case "api":
+                return self._get_color_api(point)
+            case "dxcam":
+                return self._get_color_dx(point)
+        
 # カラーピッカーの表示用ウィンドウ
 def color_picker_window(stop_event):
     root = tk.Tk()
-    root.geometry("160x32")  # 長方形のウィンドウサイズに変更
+    root.geometry("144x48")  # 長方形のウィンドウサイズに変更
     root.overrideredirect(True)  # ウィンドウのデフォルトのタイトルバーや枠を削除
     root.attributes("-topmost", True)  # ウィンドウを常に最前面に
 
     label = tk.Label(root, text="", font=("Helvetica", 8))
     label.place(relx=0.5, rely=0.5, anchor="center")
+
+    picker = Picker("dxcam")
 
     # ウィンドウの色を変更
     def update_color():
@@ -81,11 +106,13 @@ def color_picker_window(stop_event):
             root.quit()
             return
         point = Point.get_mouse_position()
-        color = Color.get_color_at_position(point.x, point.y)
+        color = picker.pick_color_on(point)
+
         root.configure(bg=color.to_hex())
-        root.geometry(f"+{point.x+20}+{point.y+20}")
+        root.geometry(f"+{point.x+25}+{point.y+25}")
+
         label.config(
-            text=f"{color.to_hex()} {point}\n{color}", 
+            text=f"{color.to_hex()} {point}\n{color}\nHSV:{color.hsv_np}", 
             fg="white" if color.is_dark() else "black",
             bg=color.to_hex()
         )
@@ -94,14 +121,16 @@ def color_picker_window(stop_event):
     # F1キーで座標と色をクリップボードに保存
     def copy_to_clipboard():
         point = Point.get_mouse_position()
-        color = Color.get_color_at_position(point.x, point.y)
-        clipboard_text = f"Position: {point}, Color: {color.to_hex()} ({color}, HSV: {color.hsv_np})"
+        color = picker.pick_color_on(point)
+        clipboard_text = f"{color.to_hex()} {point}\n{color}\nHSV:{color.hsv_np}"
         pyperclip.copy(clipboard_text)
         print(f"Copied to clipboard: {clipboard_text}")
 
     keyboard.add_hotkey('f1', copy_to_clipboard)
     update_color()
     root.mainloop()
+
+
 
 # システムトレイアイコンの設定
 def setup_tray(stop_event):
