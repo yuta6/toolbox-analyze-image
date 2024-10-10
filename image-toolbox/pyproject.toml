@@ -5,6 +5,7 @@ description = "convinience tools for valorant bot"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "dxcam>=0.0.5",
     "keyboard>=0.13.5",
     "pyperclip>=1.9.0",
     "pystray>=0.19.5",
