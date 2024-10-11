@@ -5,87 +5,113 @@ import cv2
 import numpy as np
 import sys
 
+class HSVRange:
+    """HSV色空間の範囲を表現するクラス"""
+    def __init__(self, h_min=0, h_max=179, s_min=0, s_max=255, v_min=0, v_max=255):
+        self.h_min = h_min
+        self.h_max = h_max
+        self.s_min = s_min
+        self.s_max = s_max
+        self.v_min = v_min
+        self.v_max = v_max
+
+    def to_numpy_array(self):
+        """OpenCVで使用できるNumpy配列に変換する"""
+        return np.array([self.h_min, self.s_min, self.v_min]), np.array([self.h_max, self.s_max, self.v_max])
+
+class ImageProcessor:
+    """画像処理を担当するクラス"""
+    def __init__(self, image_path):
+        self.original_image = cv2.imread(image_path)
+
+    def apply_hsv_filter(self, hsv_range: HSVRange):
+        """HSV範囲に基づいて画像をフィルター処理する"""
+        hsv_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2HSV)
+        lower_bound, upper_bound = hsv_range.to_numpy_array()
+        mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
+        filtered_image = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
+        return filtered_image
+
+class ImageViewer:
+    """画像を表示するクラス"""
+    def __init__(self, master, image, title="Image"):
+        self.master = master
+        self.title = title
+        
+        self.canvas = tk.Label(master)
+        self.canvas.grid(row=1, column=0, padx=10, pady=5)
+        self.update_image(image)
+
+    def update_image(self, image):
+        """画像を更新する"""
+        height = 600
+        aspect_ratio = image.shape[1] / image.shape[0]
+        width = int(height * aspect_ratio)
+        resized_image = cv2.resize(image, (width, height))
+        rgb_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
+        photo_image = tk.PhotoImage(data=cv2.imencode('.png', cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR))[1].tobytes())
+        self.canvas.image = photo_image
+        self.canvas.configure(image=photo_image)
+
+
+class HSVControlPanel:
+    """HSVスライダーのコントロールパネルを表現するクラス"""
+    def __init__(self, master, hsv_range: HSVRange, on_change_callback):
+        self.master = master
+        self.hsv_range = hsv_range
+        self.on_change_callback = on_change_callback
+
+        self.frame = ttk.LabelFrame(self.master, text="HSV Controls")
+        self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.hue_min_slider, self.hue_max_slider = self.create_double_slider("Hue", 0, 179, self.hsv_range.h_min, self.hsv_range.h_max)
+        self.sat_min_slider, self.sat_max_slider = self.create_double_slider("Saturation", 0, 255, self.hsv_range.s_min, self.hsv_range.s_max)
+        self.val_min_slider, self.val_max_slider = self.create_double_slider("Value", 0, 255, self.hsv_range.v_min, self.hsv_range.v_max)
+
+    def create_double_slider(self, text, from_, to, initial_min, initial_max):
+        """minとmaxの両方を指定できるスライダーを作成するヘルパー関数"""
+        label = ttk.Label(self.frame, text=text)
+        label.pack()
+        min_slider = ttk.Scale(self.frame, from_=from_, to=to, orient="horizontal", command=self._on_slider_change)
+        min_slider.set(initial_min)
+        min_slider.pack(fill="x", padx=5, pady=5)
+        max_slider = ttk.Scale(self.frame, from_=from_, to=to, orient="horizontal", command=self._on_slider_change)
+        max_slider.set(initial_max)
+        max_slider.pack(fill="x", padx=5, pady=5)
+        return min_slider, max_slider
+
+    def _on_slider_change(self, event):
+        """スライダーの値が変更されたときに呼び出される"""
+        self.hsv_range.h_min = int(self.hue_min_slider.get())
+        self.hsv_range.h_max = int(self.hue_max_slider.get())
+        self.hsv_range.s_min = int(self.sat_min_slider.get()) if hasattr(self, 'sat_min_slider') else 0
+        self.hsv_range.s_max = int(self.sat_max_slider.get())
+        self.hsv_range.v_min = int(self.val_min_slider.get()) if hasattr(self, 'val_min_slider') else 0
+        self.hsv_range.v_max = int(self.val_max_slider.get())
+        self.on_change_callback()
+
+
 class ColorReacherApp:
+    """メインアプリケーションクラス"""
     def __init__(self, root, image_path):
         self.root = root
         self.root.title("Color Reacher App")
-        
-        # Load the image using OpenCV
-        self.original_image = cv2.imread(image_path)
-        self.filtered_image = self.original_image.copy()
-        self.h_min, self.h_max = 0, 179
-        self.s_min, self.s_max = 0, 255
-        self.v_min, self.v_max = 0, 255
-        
-        # UI Layout
-        self.create_widgets()
-        self.update_filtered_image()
 
-    def create_widgets(self):
-        # Left Upper - HSV Range Sliders
-        control_frame = ttk.LabelFrame(self.root, text="HSV Controls")
-        control_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.image_processor = ImageProcessor(image_path)
+        self.hsv_range = HSVRange()
 
-        # H Range Slider
-        self.hue_slider = self.create_slider(control_frame, "Hue", 0, 179, self.on_slider_change)
-        # S Range Slider
-        self.sat_slider = self.create_slider(control_frame, "Saturation", 0, 255, self.on_slider_change)
-        # V Range Slider
-        self.val_slider = self.create_slider(control_frame, "Value", 0, 255, self.on_slider_change)
-        
-        # Left Lower - Empty Frame (Placeholder)
-        placeholder_frame = ttk.Frame(self.root, width=200, height=200)
-        placeholder_frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+        self.original_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "Original Image")
+        self.original_image_viewer.canvas.grid(row=0, column=2, padx=10, pady=10)
 
-        # Right Upper - Original Image Preview
-        self.original_image_label = ttk.Label(self.root, text="Original Image")
-        self.original_image_label.grid(row=0, column=1, padx=10, pady=10)
-        self.original_image_canvas = tk.Label(self.root)
-        self.original_image_canvas.grid(row=0, column=2, padx=10, pady=10)
-        self.display_image(self.original_image, self.original_image_canvas)
+        self.filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "Filtered Image")
+        self.filtered_image_viewer.canvas.grid(row=1, column=2, padx=10, pady=10)
 
-        # Right Lower - Filtered Image Preview
-        self.filtered_image_label = ttk.Label(self.root, text="Filtered Image")
-        self.filtered_image_label.grid(row=1, column=1, padx=10, pady=10)
-        self.filtered_image_canvas = tk.Label(self.root)
-        self.filtered_image_canvas.grid(row=1, column=2, padx=10, pady=10)
-        
-    def create_slider(self, parent, text, from_, to, command):
-        label = ttk.Label(parent, text=text)
-        label.pack()
-        slider = ttk.Scale(parent, from_=from_, to=to, orient="horizontal", command=command)
-        slider.pack(fill="x", padx=5, pady=5)
-        return slider
-
-    def on_slider_change(self, event):
-        self.h_min = int(self.hue_slider.get())
-        self.s_min = int(self.sat_slider.get())
-        self.v_min = int(self.val_slider.get())
-        self.update_filtered_image()
+        self.hsv_control_panel = HSVControlPanel(self.root, self.hsv_range, self.update_filtered_image)
 
     def update_filtered_image(self):
-        # Convert original image to HSV
-        hsv_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2HSV)
-        # Define the range for HSV filtering
-        lower_bound = np.array([self.h_min, self.s_min, self.v_min])
-        upper_bound = np.array([self.h_max, self.s_max, self.v_max])
-        # Apply the mask
-        mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
-        filtered = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
-        self.filtered_image = filtered
-        # Display the filtered image
-        self.display_image(self.filtered_image, self.filtered_image_canvas)
-
-    def display_image(self, image, canvas):
-        # Resize the image to fit the canvas
-        image_resized = cv2.resize(image, (300, 300))
-        # Convert color from BGR to RGB
-        image_rgb = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
-        # Convert to PhotoImage format using OpenCV
-        image_tk = tk.PhotoImage(data=cv2.imencode('.png', image_rgb)[1].tobytes())
-        # Update the canvas
-        canvas.image = image_tk
-        canvas.configure(image=image_tk)
+        """フィルター処理された画像を更新する"""
+        filtered_image = self.image_processor.apply_hsv_filter(self.hsv_range)
+        self.filtered_image_viewer.update_image(filtered_image)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
