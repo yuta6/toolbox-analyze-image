@@ -61,7 +61,7 @@ class ImageViewer:
 
     def update_image(self, image):
         """画像を更新する"""
-        height = 300  # 表示する画像の高さを調整
+        height = 640  # 画像の高さを640に固定
         aspect_ratio = image.shape[1] / image.shape[0]
         width = int(height * aspect_ratio)
         resized_image = cv2.resize(image, (width, height))
@@ -209,7 +209,7 @@ class DualSlider(tk.Canvas):
                             self.width - self.padding, self.height/2)
                 self.itemconfig(self.range_line, fill='blue')
                 # 二つ目の範囲 [from, max]
-                # 新しいラインを作成（既存のrange_lineを上書きしないため）
+                # 既存の追加ラインを削除
                 existing_lines = [item for item in self.find_all() if self.type(item) == 'line' and item != self.track and item != self.range_line]
                 for line in existing_lines:
                     self.delete(line)
@@ -233,32 +233,58 @@ class HSVControlPanel:
         self.frame = ttk.LabelFrame(self.master, text="HSV Controls")
         self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
-        # デュアルスライダーを作成
-        self.hue_slider = DualSlider(self.frame, "Hue", 0, 179, self.hsv_range.h_min, self.hsv_range.h_max, 
+        # Hueスライダーと値表示
+        hue_frame = ttk.Frame(self.frame)
+        hue_frame.pack(fill="x", padx=5, pady=5)
+        self.hue_slider = DualSlider(hue_frame, "Hue", 0, 179, self.hsv_range.h_min, self.hsv_range.h_max, 
                                      self.on_hue_change, circular=True)
-        self.hue_slider.pack(fill="x", padx=5, pady=5)
+        self.hue_slider.pack(side="left", fill="x", expand=True)
+        self.hue_min_label = ttk.Label(hue_frame, text=f"Min: {self.hsv_range.h_min}")
+        self.hue_min_label.pack(side="left", padx=5)
+        self.hue_max_label = ttk.Label(hue_frame, text=f"Max: {self.hsv_range.h_max}")
+        self.hue_max_label.pack(side="left", padx=5)
 
-        self.sat_slider = DualSlider(self.frame, "Saturation", 0, 255, self.hsv_range.s_min, self.hsv_range.s_max, 
+        # Saturationスライダーと値表示
+        sat_frame = ttk.Frame(self.frame)
+        sat_frame.pack(fill="x", padx=5, pady=5)
+        self.sat_slider = DualSlider(sat_frame, "Saturation", 0, 255, self.hsv_range.s_min, self.hsv_range.s_max, 
                                      self.on_sat_change)
-        self.sat_slider.pack(fill="x", padx=5, pady=5)
+        self.sat_slider.pack(side="left", fill="x", expand=True)
+        self.sat_min_label = ttk.Label(sat_frame, text=f"Min: {self.hsv_range.s_min}")
+        self.sat_min_label.pack(side="left", padx=5)
+        self.sat_max_label = ttk.Label(sat_frame, text=f"Max: {self.hsv_range.s_max}")
+        self.sat_max_label.pack(side="left", padx=5)
 
-        self.val_slider = DualSlider(self.frame, "Value", 0, 255, self.hsv_range.v_min, self.hsv_range.v_max, 
+        # Valueスライダーと値表示
+        val_frame = ttk.Frame(self.frame)
+        val_frame.pack(fill="x", padx=5, pady=5)
+        self.val_slider = DualSlider(val_frame, "Value", 0, 255, self.hsv_range.v_min, self.hsv_range.v_max, 
                                      self.on_val_change)
-        self.val_slider.pack(fill="x", padx=5, pady=5)
+        self.val_slider.pack(side="left", fill="x", expand=True)
+        self.val_min_label = ttk.Label(val_frame, text=f"Min: {self.hsv_range.v_min}")
+        self.val_min_label.pack(side="left", padx=5)
+        self.val_max_label = ttk.Label(val_frame, text=f"Max: {self.hsv_range.v_max}")
+        self.val_max_label.pack(side="left", padx=5)
 
     def on_hue_change(self, min_val, max_val):
         self.hsv_range.h_min = min_val
         self.hsv_range.h_max = max_val
+        self.hue_min_label.config(text=f"Min: {self.hsv_range.h_min}")
+        self.hue_max_label.config(text=f"Max: {self.hsv_range.h_max}")
         self.on_change_callback()
 
     def on_sat_change(self, min_val, max_val):
         self.hsv_range.s_min = min_val
         self.hsv_range.s_max = max_val
+        self.sat_min_label.config(text=f"Min: {self.hsv_range.s_min}")
+        self.sat_max_label.config(text=f"Max: {self.hsv_range.s_max}")
         self.on_change_callback()
 
     def on_val_change(self, min_val, max_val):
         self.hsv_range.v_min = min_val
         self.hsv_range.v_max = max_val
+        self.val_min_label.config(text=f"Min: {self.hsv_range.v_min}")
+        self.val_max_label.config(text=f"Max: {self.hsv_range.v_max}")
         self.on_change_callback()
 
 class ColorReacherApp:
