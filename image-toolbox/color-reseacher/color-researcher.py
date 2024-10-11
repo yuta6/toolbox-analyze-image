@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import filedialog
 from tkinter import ttk
 import cv2
 import numpy as np
@@ -19,6 +18,20 @@ class HSVRange:
         """OpenCVで使用できるNumpy配列に変換する"""
         return np.array([self.h_min, self.s_min, self.v_min]), np.array([self.h_max, self.s_max, self.v_max])
 
+class RGBRange:
+    """RGB色空間の範囲を表現するクラス"""
+    def __init__(self, r_min=0, r_max=255, g_min=0, g_max=255, b_min=0, b_max=255):
+        self.r_min = r_min
+        self.r_max = r_max
+        self.g_min = g_min
+        self.g_max = g_max
+        self.b_min = b_min
+        self.b_max = b_max
+
+    def to_numpy_array(self):
+        """OpenCVで使用できるNumpy配列に変換する"""
+        return np.array([self.b_min, self.g_min, self.r_min]), np.array([self.b_max, self.g_max, self.r_max])
+
 class ImageProcessor:
     """画像処理を担当するクラス"""
     def __init__(self, image_path):
@@ -29,8 +42,6 @@ class ImageProcessor:
     def apply_hsv_filter(self, hsv_range: HSVRange):
         """HSV範囲に基づいて画像をフィルター処理する"""
         hsv_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2HSV)
-        lower_bound1, upper_bound1 = hsv_range.to_numpy_array()
-
         if hsv_range.h_min <= hsv_range.h_max:
             # 一つの範囲
             lower_bound = np.array([hsv_range.h_min, hsv_range.s_min, hsv_range.v_min])
@@ -49,14 +60,21 @@ class ImageProcessor:
         filtered_image = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
         return filtered_image
 
+    def apply_rgb_filter(self, rgb_range: RGBRange):
+        """RGB範囲に基づいて画像をフィルター処理する"""
+        lower_bound, upper_bound = rgb_range.to_numpy_array()
+        mask = cv2.inRange(self.original_image, lower_bound, upper_bound)
+        filtered_image = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
+        return filtered_image
+
 class ImageViewer:
     """画像を表示するクラス"""
     def __init__(self, master, image, title="Image"):
         self.master = master
         self.title = title
 
-        self.canvas = tk.Label(master)
-        self.canvas.grid(row=1, column=0, padx=10, pady=5)
+        self.canvas = tk.Label(master, text=title)
+        self.canvas.grid(padx=10, pady=5)
         self.update_image(image)
 
     def update_image(self, image):
@@ -231,40 +249,45 @@ class HSVControlPanel:
         self.on_change_callback = on_change_callback
 
         self.frame = ttk.LabelFrame(self.master, text="HSV Controls")
-        self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        # self.frame.pack(fill="both", expand=True, padx=10, pady=10)  # 削除
+        # 内部レイアウトをgridで管理
+        self.frame.columnconfigure(0, weight=1)
 
         # Hueスライダーと値表示
         hue_frame = ttk.Frame(self.frame)
-        hue_frame.pack(fill="x", padx=5, pady=5)
+        hue_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        hue_frame.columnconfigure(0, weight=1)
         self.hue_slider = DualSlider(hue_frame, "Hue", 0, 179, self.hsv_range.h_min, self.hsv_range.h_max, 
                                      self.on_hue_change, circular=True)
-        self.hue_slider.pack(side="left", fill="x", expand=True)
+        self.hue_slider.grid(row=0, column=0, sticky="ew")
         self.hue_min_label = ttk.Label(hue_frame, text=f"Min: {self.hsv_range.h_min}")
-        self.hue_min_label.pack(side="left", padx=5)
+        self.hue_min_label.grid(row=0, column=1, padx=5)
         self.hue_max_label = ttk.Label(hue_frame, text=f"Max: {self.hsv_range.h_max}")
-        self.hue_max_label.pack(side="left", padx=5)
+        self.hue_max_label.grid(row=0, column=2, padx=5)
 
         # Saturationスライダーと値表示
         sat_frame = ttk.Frame(self.frame)
-        sat_frame.pack(fill="x", padx=5, pady=5)
+        sat_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+        sat_frame.columnconfigure(0, weight=1)
         self.sat_slider = DualSlider(sat_frame, "Saturation", 0, 255, self.hsv_range.s_min, self.hsv_range.s_max, 
                                      self.on_sat_change)
-        self.sat_slider.pack(side="left", fill="x", expand=True)
+        self.sat_slider.grid(row=0, column=0, sticky="ew")
         self.sat_min_label = ttk.Label(sat_frame, text=f"Min: {self.hsv_range.s_min}")
-        self.sat_min_label.pack(side="left", padx=5)
+        self.sat_min_label.grid(row=0, column=1, padx=5)
         self.sat_max_label = ttk.Label(sat_frame, text=f"Max: {self.hsv_range.s_max}")
-        self.sat_max_label.pack(side="left", padx=5)
+        self.sat_max_label.grid(row=0, column=2, padx=5)
 
         # Valueスライダーと値表示
         val_frame = ttk.Frame(self.frame)
-        val_frame.pack(fill="x", padx=5, pady=5)
+        val_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        val_frame.columnconfigure(0, weight=1)
         self.val_slider = DualSlider(val_frame, "Value", 0, 255, self.hsv_range.v_min, self.hsv_range.v_max, 
                                      self.on_val_change)
-        self.val_slider.pack(side="left", fill="x", expand=True)
+        self.val_slider.grid(row=0, column=0, sticky="ew")
         self.val_min_label = ttk.Label(val_frame, text=f"Min: {self.hsv_range.v_min}")
-        self.val_min_label.pack(side="left", padx=5)
+        self.val_min_label.grid(row=0, column=1, padx=5)
         self.val_max_label = ttk.Label(val_frame, text=f"Max: {self.hsv_range.v_max}")
-        self.val_max_label.pack(side="left", padx=5)
+        self.val_max_label.grid(row=0, column=2, padx=5)
 
     def on_hue_change(self, min_val, max_val):
         self.hsv_range.h_min = min_val
@@ -287,6 +310,75 @@ class HSVControlPanel:
         self.val_max_label.config(text=f"Max: {self.hsv_range.v_max}")
         self.on_change_callback()
 
+class RGBControlPanel:
+    """RGBスライダーのコントロールパネルを表現するクラス"""
+    def __init__(self, master, rgb_range: RGBRange, on_change_callback):
+        self.master = master
+        self.rgb_range = rgb_range
+        self.on_change_callback = on_change_callback
+
+        self.frame = ttk.LabelFrame(self.master, text="RGB Controls")
+        # self.frame.pack(fill="both", expand=True, padx=10, pady=10)  # 削除
+        # 内部レイアウトをgridで管理
+        self.frame.columnconfigure(0, weight=1)
+
+        # Redスライダーと値表示
+        r_frame = ttk.Frame(self.frame)
+        r_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        r_frame.columnconfigure(0, weight=1)
+        self.r_slider = DualSlider(r_frame, "Red", 0, 255, self.rgb_range.r_min, self.rgb_range.r_max, 
+                                   self.on_r_change)
+        self.r_slider.grid(row=0, column=0, sticky="ew")
+        self.r_min_label = ttk.Label(r_frame, text=f"Min: {self.rgb_range.r_min}")
+        self.r_min_label.grid(row=0, column=1, padx=5)
+        self.r_max_label = ttk.Label(r_frame, text=f"Max: {self.rgb_range.r_max}")
+        self.r_max_label.grid(row=0, column=2, padx=5)
+
+        # Greenスライダーと値表示
+        g_frame = ttk.Frame(self.frame)
+        g_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+        g_frame.columnconfigure(0, weight=1)
+        self.g_slider = DualSlider(g_frame, "Green", 0, 255, self.rgb_range.g_min, self.rgb_range.g_max, 
+                                   self.on_g_change)
+        self.g_slider.grid(row=0, column=0, sticky="ew")
+        self.g_min_label = ttk.Label(g_frame, text=f"Min: {self.rgb_range.g_min}")
+        self.g_min_label.grid(row=0, column=1, padx=5)
+        self.g_max_label = ttk.Label(g_frame, text=f"Max: {self.rgb_range.g_max}")
+        self.g_max_label.grid(row=0, column=2, padx=5)
+
+        # Blueスライダーと値表示
+        b_frame = ttk.Frame(self.frame)
+        b_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        b_frame.columnconfigure(0, weight=1)
+        self.b_slider = DualSlider(b_frame, "Blue", 0, 255, self.rgb_range.b_min, self.rgb_range.b_max, 
+                                   self.on_b_change)
+        self.b_slider.grid(row=0, column=0, sticky="ew")
+        self.b_min_label = ttk.Label(b_frame, text=f"Min: {self.rgb_range.b_min}")
+        self.b_min_label.grid(row=0, column=1, padx=5)
+        self.b_max_label = ttk.Label(b_frame, text=f"Max: {self.rgb_range.b_max}")
+        self.b_max_label.grid(row=0, column=2, padx=5)
+
+    def on_r_change(self, min_val, max_val):
+        self.rgb_range.r_min = min_val
+        self.rgb_range.r_max = max_val
+        self.r_min_label.config(text=f"Min: {self.rgb_range.r_min}")
+        self.r_max_label.config(text=f"Max: {self.rgb_range.r_max}")
+        self.on_change_callback()
+
+    def on_g_change(self, min_val, max_val):
+        self.rgb_range.g_min = min_val
+        self.rgb_range.g_max = max_val
+        self.g_min_label.config(text=f"Min: {self.rgb_range.g_min}")
+        self.g_max_label.config(text=f"Max: {self.rgb_range.g_max}")
+        self.on_change_callback()
+
+    def on_b_change(self, min_val, max_val):
+        self.rgb_range.b_min = min_val
+        self.rgb_range.b_max = max_val
+        self.b_min_label.config(text=f"Min: {self.rgb_range.b_min}")
+        self.b_max_label.config(text=f"Max: {self.rgb_range.b_max}")
+        self.on_change_callback()
+
 class ColorReacherApp:
     """メインアプリケーションクラス"""
     def __init__(self, root, image_path):
@@ -295,26 +387,43 @@ class ColorReacherApp:
 
         self.image_processor = ImageProcessor(image_path)
         self.hsv_range = HSVRange()
+        self.rgb_range = RGBRange()
 
-        # 元画像ビューア
-        self.original_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "Original Image")
-        self.original_image_viewer.canvas.grid(row=0, column=2, rowspan=2, padx=10, pady=10)
+        # GUIのレイアウトを4分割
+        self.root.columnconfigure(0, weight=1)
+        self.root.columnconfigure(1, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=1)
 
-        # フィルタ済み画像ビューア
-        self.filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "Filtered Image")
-        self.filtered_image_viewer.canvas.grid(row=0, column=3, rowspan=2, padx=10, pady=10)
+        # 左上にRGBフィルタ画像
+        self.rgb_filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "RGB Filtered Image")
+        self.rgb_filtered_image_viewer.canvas.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
-        # HSVコントロールパネル
-        self.hsv_control_panel = HSVControlPanel(self.root, self.hsv_range, self.update_filtered_image)
+        # 右上にHSVフィルタ画像
+        self.hsv_filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "HSV Filtered Image")
+        self.hsv_filtered_image_viewer.canvas.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+
+        # 左下にRGBControlPanel
+        self.rgb_control_panel = RGBControlPanel(self.root, self.rgb_range, self.update_filtered_images)
+        self.rgb_control_panel.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+
+        # 右下にHSVControlPanel
+        self.hsv_control_panel = HSVControlPanel(self.root, self.hsv_range, self.update_filtered_images)
+        self.hsv_control_panel.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
         # 初期フィルタ適用
-        self.update_filtered_image()
+        self.update_filtered_images()
 
-    def update_filtered_image(self):
+    def update_filtered_images(self):
         """フィルター処理された画像を更新する"""
         try:
-            filtered_image = self.image_processor.apply_hsv_filter(self.hsv_range)
-            self.filtered_image_viewer.update_image(filtered_image)
+            # RGBフィルタリング
+            rgb_filtered_image = self.image_processor.apply_rgb_filter(self.rgb_range)
+            self.rgb_filtered_image_viewer.update_image(rgb_filtered_image)
+
+            # HSVフィルタリング
+            hsv_filtered_image = self.image_processor.apply_hsv_filter(self.hsv_range)
+            self.hsv_filtered_image_viewer.update_image(hsv_filtered_image)
         except Exception as e:
             print(f"画像のフィルター処理中にエラーが発生しました: {e}")
 
