@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import cv2
 import numpy as np
-import sys
+import os
 
 class HSVRange:
     """HSV色空間の範囲を表現するクラス"""
@@ -379,43 +379,113 @@ class RGBControlPanel:
         self.b_max_label.config(text=f"Max: {self.rgb_range.b_max}")
         self.on_change_callback()
 
+
+class PhotoFinder:
+    """カレントディレクトリから画像ファイルを検索するクラス"""
+    IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')
+
+    def __init__(self, directory='.'):
+        self.directory = directory
+
+    def find_images(self):
+        """画像ファイルのリストを返す"""
+        return [f for f in os.listdir(self.directory)
+                if f.lower().endswith(self.IMAGE_EXTENSIONS) and os.path.isfile(os.path.join(self.directory, f))]
+
+class FinderPanel:
+    """画像ファイル名の一覧を表示するパネル"""
+    def __init__(self, parent, photo_finder, on_select_callback):
+        self.frame = ttk.Frame(parent, width=200)
+        self.frame.pack_propagate(False)  # 固定幅にする
+        self.label = ttk.Label(self.frame, text="Image Files")
+        self.label.pack(padx=5, pady=5)
+        
+        self.listbox = tk.Listbox(self.frame)
+        self.listbox.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        self.scrollbar = ttk.Scrollbar(self.listbox, orient='vertical', command=self.listbox.yview)
+        self.listbox.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.pack(side='right', fill='y')
+        
+        self.photo_finder = photo_finder
+        self.on_select_callback = on_select_callback
+        self.populate_list()
+
+        self.listbox.bind('<<ListboxSelect>>', self.on_select)
+
+    def populate_list(self):
+        """リストボックスに画像ファイル名を追加"""
+        images = self.photo_finder.find_images()
+        for img in images:
+            self.listbox.insert(tk.END, img)
+
+    def on_select(self, event):
+        """リストボックスで選択が変更されたときの処理"""
+        selection = event.widget.curselection()
+        if selection:
+            index = selection[0]
+            filename = event.widget.get(index)
+            self.on_select_callback(filename)
+
 class ColorReacherApp:
     """メインアプリケーションクラス"""
-    def __init__(self, root, image_path):
+    def __init__(self, root):
         self.root = root
         self.root.title("Color Reacher App")
 
-        self.image_processor = ImageProcessor(image_path)
-        self.hsv_range = HSVRange()
-        self.rgb_range = RGBRange()
+        # PhotoFinderとFinderPanelの初期化
+        self.photo_finder = PhotoFinder()
+        self.finder_panel = FinderPanel(self.root, self.photo_finder, self.on_image_selected)
+        self.finder_panel.frame.grid(row=0, column=0, rowspan=2, padx=10, pady=10, sticky="ns")
 
-        # GUIのレイアウトを4分割
-        self.root.columnconfigure(0, weight=1)
+        # 既存のUIのレイアウトを調整
+        self.main_frame = ttk.Frame(self.root)
+        self.main_frame.grid(row=0, column=1, rowspan=2, sticky="nsew")
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(0, weight=1)
         self.root.rowconfigure(1, weight=1)
 
+        # 初期画像表示用のプレースホルダー
+        self.image_processor = None
+        self.hsv_range = HSVRange()
+        self.rgb_range = RGBRange()
+
+        # GUIのレイアウトを4分割
+        self.main_frame.columnconfigure(0, weight=1)
+        self.main_frame.columnconfigure(1, weight=1)
+        self.main_frame.rowconfigure(0, weight=1)
+        self.main_frame.rowconfigure(1, weight=1)
+
         # 左上にRGBフィルタ画像
-        self.rgb_filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "RGB Filtered Image")
+        self.rgb_filtered_image_viewer = ImageViewer(self.main_frame, np.zeros((300, 300, 3), dtype=np.uint8), "RGB Filtered Image")
         self.rgb_filtered_image_viewer.canvas.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         # 右上にHSVフィルタ画像
-        self.hsv_filtered_image_viewer = ImageViewer(self.root, self.image_processor.original_image, "HSV Filtered Image")
+        self.hsv_filtered_image_viewer = ImageViewer(self.main_frame, np.zeros((300, 300, 3), dtype=np.uint8), "HSV Filtered Image")
         self.hsv_filtered_image_viewer.canvas.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
         # 左下にRGBControlPanel
-        self.rgb_control_panel = RGBControlPanel(self.root, self.rgb_range, self.update_filtered_images)
+        self.rgb_control_panel = RGBControlPanel(self.main_frame, self.rgb_range, self.update_filtered_images)
         self.rgb_control_panel.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
         # 右下にHSVControlPanel
-        self.hsv_control_panel = HSVControlPanel(self.root, self.hsv_range, self.update_filtered_images)
+        self.hsv_control_panel = HSVControlPanel(self.main_frame, self.hsv_range, self.update_filtered_images)
         self.hsv_control_panel.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
-        # 初期フィルタ適用
-        self.update_filtered_images()
+    def on_image_selected(self, filename):
+        """FinderPanelで画像が選択されたときの処理"""
+        image_path = os.path.join(self.photo_finder.directory, filename)
+        try:
+            self.image_processor = ImageProcessor(image_path)
+            self.update_filtered_images()
+        except Exception as e:
+            messagebox.showerror("Error", f"画像の読み込みに失敗しました: {e}")
+            print(f"画像の読み込みに失敗しました: {e}")
 
     def update_filtered_images(self):
         """フィルター処理された画像を更新する"""
+        if not self.image_processor:
+            return
         try:
             # RGBフィルタリング
             rgb_filtered_image = self.image_processor.apply_rgb_filter(self.rgb_range)
@@ -425,14 +495,10 @@ class ColorReacherApp:
             hsv_filtered_image = self.image_processor.apply_hsv_filter(self.hsv_range)
             self.hsv_filtered_image_viewer.update_image(hsv_filtered_image)
         except Exception as e:
+            messagebox.showerror("Error", f"画像のフィルター処理中にエラーが発生しました: {e}")
             print(f"画像のフィルター処理中にエラーが発生しました: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python color_reacher.py <image_path>")
-        sys.exit(1)
-    
-    image_path = sys.argv[1]
     root = tk.Tk()
-    app = ColorReacherApp(root, image_path)
+    app = ColorReacherApp(root)
     root.mainloop()
