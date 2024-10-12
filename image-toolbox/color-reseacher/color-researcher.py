@@ -3,6 +3,8 @@ from tkinter import ttk
 import cv2
 import numpy as np
 import os
+from natsort import natsorted
+
 
 class HSVRange:
     """HSV色空間の範囲を表現するクラス"""
@@ -58,6 +60,7 @@ class ImageProcessor:
             mask = cv2.bitwise_or(mask1, mask2)
 
         filtered_image = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
+
         return filtered_image
 
     def apply_rgb_filter(self, rgb_range: RGBRange):
@@ -389,8 +392,9 @@ class PhotoFinder:
 
     def find_images(self):
         """画像ファイルのリストを返す"""
-        return [f for f in os.listdir(self.directory)
+        return natsorted([f for f in os.listdir(self.directory)
                 if f.lower().endswith(self.IMAGE_EXTENSIONS) and os.path.isfile(os.path.join(self.directory, f))]
+            )
 
 class FinderPanel:
     """画像ファイル名の一覧を表示するパネル"""
@@ -479,7 +483,6 @@ class ColorReacherApp:
             self.image_processor = ImageProcessor(image_path)
             self.update_filtered_images()
         except Exception as e:
-            messagebox.showerror("Error", f"画像の読み込みに失敗しました: {e}")
             print(f"画像の読み込みに失敗しました: {e}")
 
     def update_filtered_images(self):
@@ -495,7 +498,6 @@ class ColorReacherApp:
             hsv_filtered_image = self.image_processor.apply_hsv_filter(self.hsv_range)
             self.hsv_filtered_image_viewer.update_image(hsv_filtered_image)
         except Exception as e:
-            messagebox.showerror("Error", f"画像のフィルター処理中にエラーが発生しました: {e}")
             print(f"画像のフィルター処理中にエラーが発生しました: {e}")
 
 if __name__ == "__main__":
