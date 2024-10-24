@@ -8,7 +8,7 @@ from natsort import natsorted
 
 class HSVRange:
     """HSV色空間の範囲を表現するクラス"""
-    def __init__(self, h_min=0, h_max=179, s_min=0, s_max=255, v_min=0, v_max=255):
+    def __init__(self, h_min=26, h_max=34, s_min=160, s_max=255, v_min=128, v_max=255):
         self.h_min = h_min
         self.h_max = h_max
         self.s_min = s_min
@@ -59,7 +59,15 @@ class ImageProcessor:
             mask2 = cv2.inRange(hsv_image, lower_bound2, upper_bound2)
             mask = cv2.bitwise_or(mask1, mask2)
 
+
+
         filtered_image = cv2.bitwise_and(self.original_image, self.original_image, mask=mask)
+
+        filtered_image = cv2.morphologyEx(            
+            filtered_image, 
+            cv2.MORPH_CLOSE, 
+            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (80, 80))
+        )
 
         return filtered_image
 
