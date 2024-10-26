@@ -395,7 +395,7 @@ class PhotoFinder:
     """カレントディレクトリから画像ファイルを検索するクラス"""
     IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')
 
-    def __init__(self, directory='.'):
+    def __init__(self, directory='../images'):
         self.directory = directory
 
     def find_images(self):

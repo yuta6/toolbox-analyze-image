@@ -34,7 +34,7 @@ def save_capture(np_image, directory: Path, extension: str = 'png'):
     index = 1  # 初期値
 
     # 保存先ディレクトリを指定
-    directory = Path('.') / directory  # カレントディレクトリをPathオブジェクトで指定
+    directory = Path('../images') / directory  # カレントディレクトリをPathオブジェクトで指定
     if not directory.exists():
         directory.mkdir()
 
@@ -61,19 +61,17 @@ def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: 
     print(
         "スクリーンショットをとりました。ファイル名:{}".format(filename) 
         if filename else "保存に失敗しました。"
-    ) 
+    )
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
-    parser.add_argument("save_directory", type=str, nargs="?", default="output", help="スクリーンショットの保存先ディレクトリ")
+    parser.add_argument("save_directory", type=str, nargs="?", default="", help="スクリーンショットの保存先ディレクトリ")
     parser.add_argument("-r", "--region", type=int, nargs="*", help="キャプチャ領域の幅と高さを指定")
     parser.add_argument("-ex", "--extension", type=str, default="png", help="拡張子")
     args = parser.parse_args()
 
-    # ディレクトリの設定
     directory = Path(args.save_directory)
 
-    # キャプチャ領域の処理
     match args.region:
         case None:
             region = None
@@ -84,7 +82,6 @@ def parse_arguments():
         case _:
             raise ValueError("キャプチャ領域は1つまたは2つの値を指定してください")
 
-    # 結果を返す
     return directory, region, args.extension
 
 
@@ -102,5 +99,3 @@ def main():
     print("終了します")
 
 main()
-
-    
