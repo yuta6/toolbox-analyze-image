@@ -32,19 +32,19 @@ def process_image(image: np.ndarray) -> np.ndarray:
     
     # Step 2: HSVでフィルタリング（Sが10以下、Vが200以上）
     lower_bound = np.array([0, 0, 160])  # Hの範囲は問わない、S <= 10、V >= 200
-    upper_bound = np.array([179, 16, 245])  # Hは全範囲、S <= 10、Vの最大値
+    upper_bound = np.array([179, 10, 220])  # Hは全範囲、S <= 10、Vの最大値
     
     # Step 3: マスク生成
     mask = cv2.inRange(hsv, lower_bound, upper_bound)
     
     # Step 4: ノイズ除去と穴埋め処理
-    kernel = np.ones((3, 3), np.uint8)  # 小さなカーネルを定義
+    #kernel = np.ones((2, 2), np.uint8)  # 小さなカーネルを定義
     
     # 小さなノイズを取り除くためのオープニング処理
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    #mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     
     # 小さな穴を埋めるためのクロージング処理
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    #mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     
     return mask
 
