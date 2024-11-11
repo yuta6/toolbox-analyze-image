@@ -27,10 +27,10 @@ CENTERY=int(SCREENHEIGHT/2) # intしないと行列とかをスライスする�
 ##########################################
 
 ### 座標 ###
-SINGLEFIRE_POSITION=(2268,1352)  # (2268,1352)が白となるのは単発武器のときだけ。　1
+SINGLEFIRE_POSITION=(2270,1352)  # (2268,1352)が白となるのは単発武器のときだけ。　1
 CHOKE_POSITION=(2276,1360)      # (2272,1336)が白となるのはチョーク武器のときだけ。 (2276, 1360)
 BURST_POSITON=(2272,1352)      # これが白ということは　バースト武器か単発武器。 3
-FULLAUTO_POSITION=(2272, 1348) # これが白ということはフルオートか単発武器。 4
+FULLAUTO_POSITION=(2267, 1359) # これが白ということはフルオートか単発武器。 4
 AMMOCOLOR_POSITION=(2432,1280) # ここで武器の弾薬の種類を確認する。
 HEALING_POSITION=(2212,936)    # 色(R:135, G:135, B:135),位置(2212, 936),位置(2212, 936) 確実性が低いけど1色であやる。
 
@@ -81,14 +81,14 @@ def get_pixel_color(img,position) :
 
 # 単発武器のとき 1 かつ 3 かつ 4 チョークのとき 2 バーストのとき 3 フルオートのとき4
 def judge_firemode(screen) :
-    if get_pixel_color(screen,SINGLEFIRE_POSITION)==WHITE :
-        return SINGLEFIRE
+    if get_pixel_color(screen,FULLAUTO_POSITION)==WHITE :
+        return FULLAUTO
     elif get_pixel_color(screen,CHOKE_POSITION)==WHITE :
         return CHOKE
     elif get_pixel_color(screen,BURST_POSITON)==WHITE :
         return BURST
-    elif get_pixel_color(screen,FULLAUTO_POSITION)==WHITE :
-        return FULLAUTO
+    elif get_pixel_color(screen,SINGLEFIRE_POSITION)==WHITE :
+        return SINGLEFIRE
     else :
         return 0
 
