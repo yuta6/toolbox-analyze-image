@@ -5,6 +5,7 @@ import win32api
 import ctypes
 
 import time
+import threading
 
 import numpy as np
 import dxcam
@@ -175,18 +176,36 @@ def triggerchooser(camera) :
     while True :        
         if triggercheacker(camera) :
             print("Press H key")
-            dkey.PressKey(VK_H)
+            dkey.PressKey(VK_J)
             while triggercheacker(camera) :
                 time.sleep(0.1)
             print("Release H key")
-            dkey.ReleaseKey(VK_H)
+            dkey.ReleaseKey(VK_J)
 
-def main() :
+def leftclicker():
+    while True :
+        if getkeystate(LBUTTON) or getkeystate(RBUTTON) :
+            dkey.PressKey(VK_J)
+            while getkeystate(LBUTTON) or  getkeystate(RBUTTON) :
+                time.sleep(0.1)
+            dkey.ReleaseKey(VK_J)
+
+def main():
     # ゲーム画面のスクリーンショット
-    camera=dxcam.create(output_color="BGR")
+    camera = dxcam.create(output_color="BGR")
     print("スクリプトを起動しました。")
 
-    triggerchooser(camera)
+    # スレッドの作成
+    thread1 = threading.Thread(target=triggerchooser, args=(camera,))
+    thread2 = threading.Thread(target=leftclicker)
 
-if __name__ == "__main__":         
+    # スレッドの開始
+    thread1.start()
+    thread2.start()
+
+    # スレッドの終了を待つ
+    thread1.join()
+    thread2.join()
+
+if __name__ == "__main__":
     main()
