@@ -1,101 +1,59 @@
-from typing import NamedTuple
+from windows_capture import WindowsCapture, Frame, InternalCaptureControl
+import os
 import ctypes
-import dxcam
-import time 
-import cv2
-import keyboard
+from time import sleep
 
-from pathlib import Path
-import argparse
+# Win32 APIの定数
+VK_LMENU = 0xA4  # 左Altキーの仮想キーコード
 
-class Point(NamedTuple):
-    x: int
-    y: int
+capture = WindowsCapture(
+    cursor_capture=None,
+    draw_border=None,
+    monitor_index=None,
+    window_name=None,
+)
 
+# 前回の状態を保持する変数
+last_key_state = False
 
-class ScreenSize: 
-    def __init__(self):
-        self.width = int(ctypes.windll.user32.GetSystemMetrics(0))  
-        self.height = int(ctypes.windll.user32.GetSystemMetrics(1))
-        self.center = Point(self.width // 2, self.height // 2)
-
-class CaptureRegion:
-    def __init__(self, region : Point):
-        s = ScreenSize()
-        self.tup = (
-            s.center.x - region.x//2,  # 左
-            s.center.y - region.y//2,  # 上
-            s.center.x + region.x//2,  # 右
-            s.center.y + region.y//2   # 下
-        )
-
-def save_capture(np_image, directory: Path, extension: str = 'png'):
-    base_filename = 'pic'
-    index = 1  # 初期値
-
-    # 保存先ディレクトリを指定
-    directory = Path('../images') / directory  # カレントディレクトリをPathオブジェクトで指定
-    if not directory.exists():
-        directory.mkdir()
-
-    path = directory / f'{base_filename}{index}.{extension}'
-    while path.exists():
-        index += 1
-        path = directory / f'{base_filename}{index}.{extension}'
+def get_next_image_number(directory):
+    existing_files = []
+    for filename in os.listdir(directory):
+        if filename.startswith('pic') and filename.endswith('.png'):
+            try:
+                num = int(filename[3:-4])
+                existing_files.append(num)
+            except ValueError:
+                continue
     
-    # 画像を保存
-    success = cv2.imwrite(str(path), np_image)
-    return  str(path) if success else None
+    return 1 if not existing_files else max(existing_files) + 1
 
-def capture_and_save(camera: dxcam.DXCamera , region: CaptureRegion, directory: Path, extension: str = 'png'):
-    t1 = time.time()
-    capture_nparray = camera.grab(region=region.tup) if region else camera.grab()
-    if capture_nparray is None:
-        print("キャプチャに失敗しました。")
-        return
+@capture.event
+def on_frame_arrived(frame: Frame, capture_control: InternalCaptureControl):
+    global last_key_state
+    
+    # 左Altキーの状態を取得
+    key_state = bool(ctypes.windll.user32.GetAsyncKeyState(VK_LMENU) & 0x8000)
+    
+    # キーが押された瞬間を検出（前回False で 今回True）
+    if not last_key_state and key_state:
+        image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images')
+        
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+        
+        next_num = get_next_image_number(image_dir)
+        filename = f"pic{next_num}.png"
+        filepath = os.path.join(image_dir, filename)
+        
+        print(f"Saving screenshot: {filepath}")
+        frame.save_as_image(filepath)
+    
+    # 状態を更新
+    last_key_state = key_state
 
-    t2 = time.time()
-    filename = save_capture(capture_nparray, directory, extension)
-    t3 = time.time()
-    print("処理時間: {:2f} ms + {:2f} ms = {:2f} ms".format((t2 - t1) * 1000, (t3 - t2) * 1000, (t3 - t1) * 1000))
-    print(
-        "スクリーンショットをとりました。ファイル名:{}".format(filename) 
-        if filename else "保存に失敗しました。"
-    )
+@capture.event
+def on_closed():
+    print("Capture Session Closed")
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="スクリーンショットを撮影して保存します。")
-    parser.add_argument("save_directory", type=str, nargs="?", default="", help="スクリーンショットの保存先ディレクトリ")
-    parser.add_argument("-r", "--region", type=int, nargs="*", help="キャプチャ領域の幅と高さを指定")
-    parser.add_argument("-ex", "--extension", type=str, default="png", help="拡張子")
-    args = parser.parse_args()
-
-    directory = Path(args.save_directory)
-
-    match args.region:
-        case None:
-            region = None
-        case [value1]:
-            region = Point(value1, value1)
-        case [value1, value2]:
-            region = Point(value1, value2)
-        case _:
-            raise ValueError("キャプチャ領域は1つまたは2つの値を指定してください")
-
-    return directory, region, args.extension
-
-
-def main():
-    print("Altキーでスクリーンショットを保存します。ENDキーで終了します。")
-
-    directory, region, extension = parse_arguments()
-
-    camera = dxcam.create(output_color="BGR")
-    region = CaptureRegion(region) if region else None
-
-    keyboard.add_hotkey('alt', capture_and_save, args=(camera, region, directory, extension))
-    keyboard.wait('end')
-
-    print("終了します")
-
-main()
+capture.start()

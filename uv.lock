@@ -17,11 +17,11 @@ resolution-markers = [
 
 [[package]]
 name = "comtypes"
-version = "1.4.7"
+version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/52/55/f2122be04a51f2c90764d37b83d420a8abc263ab81b2557f142324160b3a/comtypes-1.4.7.zip", hash = "sha256:cc4f3cd5db28c6a0c9fce781720192c60b2f198e548fd6dfcfc1d47b6f8ea20f", size = 250472 }
+sdist = { url = "https://files.pythonhosted.org/packages/17/c3/9ca662355cb2322d4a015ca3995f7b0763f822c7473d19eef2dc9225db5f/comtypes-1.4.8.zip", hash = "sha256:bb2286cfb3b96f838307200a85b00b98e1bdebf1e58ec3c28b36b1ccfafac01f", size = 254260 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/be/f329ad3247f323f350395ad02f33937c9f189b0f8862e9319dd90ab0b867/comtypes-1.4.7-py3-none-any.whl", hash = "sha256:d46ac2bfb6176eda6b03cd64b9afaa212224ede105054e77aac6bbbd8d9979db", size = 226801 },
+    { url = "https://files.pythonhosted.org/packages/f5/9f/5fe518644455a4a806a9aff528f201e3103b95cec48c1802d118dc55cf67/comtypes-1.4.8-py3-none-any.whl", hash = "sha256:773109b12aa0bec630d5b2272dd983cbaa25605a12fc1319f99730c9d0b72f79", size = 229405 },
 ]
 
 [[package]]
@@ -2835,6 +2835,7 @@ dependencies = [
     { name = "pystray" },
     { name = "pywin32" },
     { name = "rich" },
+    { name = "windows-capture" },
 ]
 
 [package.dev-dependencies]
@@ -2851,6 +2852,7 @@ requires-dist = [
     { name = "pystray", specifier = ">=0.19.5" },
     { name = "pywin32", specifier = ">=307" },
     { name = "rich", specifier = ">=13.9.2" },
+    { name = "windows-capture", specifier = ">=1.4.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -2863,4 +2865,17 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/df/db/f35a00659bc03fec321ba8bce9420de607a1d37f8342eee1863174c69557/typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8", size = 85321 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d", size = 37438 },
+]
+
+[[package]]
+name = "windows-capture"
+version = "1.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "opencv-python" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2d/68/065edbee59fdcbf324a36c2d61919ca302b2a9674285c73eb3855752f3f0/windows_capture-1.4.2.tar.gz", hash = "sha256:d7a6840ad5e515c02ab657544e06ce5aeb8fe5598917e049ffeca1fe21140352", size = 41027 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/0c/2626a31baf675d1659f473bf39775a26c1bd159379512623d9e81d09fecf/windows_capture-1.4.2-cp39-abi3-win_amd64.whl", hash = "sha256:5d89fff1f75c3345599893a2108972ea93a2721c48e70d76c0cf591825be8bf0", size = 207230 },
 ]

@@ -12,6 +12,7 @@ dependencies = [
     "pystray>=0.19.5",
     "pywin32>=307",
     "rich>=13.9.2",
+    "windows-capture>=1.4.2",
 ]
 
 [tool.uv]
