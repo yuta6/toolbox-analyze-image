@@ -26,7 +26,7 @@ class Point:
         return cls(pt.x, pt.y)
     
     def __str__(self):
-        return f"({self.x},{self.y})"
+        return f"({self.x-3},{self.y-3})"
 
 class Color:
     def __init__(self, r=0, g=0, b=0):
@@ -81,6 +81,8 @@ class Picker:
     def pick_color_on(self, point=None):
         if point is None:
             point = Point.get_mouse_position()
+            point.x -= 3
+            point.y -= 3
 
         match self.method: 
             case "api":
