@@ -12,7 +12,7 @@ file_list = [f for f in os.listdir(directory_path) if f.endswith(('.png', '.jpg'
 
 # 2480,20から2490,36の四角形の座標
 x_start, y_start = 2480, 20
-x_end, y_end = 2492, 40
+x_end, y_end = 2492, 36
 
 # 結果の格納
 results = []
