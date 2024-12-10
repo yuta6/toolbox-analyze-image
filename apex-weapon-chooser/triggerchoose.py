@@ -176,16 +176,16 @@ def triggerchooser(camera) :
     while True :        
         if triggercheacker(camera) :
             print("Press H key")
-            dkey.PressKey(VK_J)
+            dkey.PressKey(VK_H)
             while triggercheacker(camera) :
                 time.sleep(0.1)
             print("Release H key")
-            dkey.ReleaseKey(VK_J)
+            dkey.ReleaseKey(VK_H)
 
 def leftclicker():
     while True :
         if getkeystate(LBUTTON) or getkeystate(RBUTTON) :
-            dkey.PressKey(VK_J)
+            dkey.PressKey(VK_J)jj
             while getkeystate(LBUTTON) or  getkeystate(RBUTTON) :
                 time.sleep(0.1)
             dkey.ReleaseKey(VK_J)
@@ -198,6 +198,8 @@ def main():
     # スレッドの作成
     thread1 = threading.Thread(target=triggerchooser, args=(camera,))
     thread2 = threading.Thread(target=leftclicker)
+    thread1.daemon = True
+    thread2.daemon = True
 
     # スレッドの開始
     thread1.start()
