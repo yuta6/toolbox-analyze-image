@@ -185,7 +185,7 @@ def triggerchooser(camera) :
 def leftclicker():
     while True :
         if getkeystate(LBUTTON) or getkeystate(RBUTTON) :
-            dkey.PressKey(VK_J)jj
+            dkey.PressKey(VK_J)
             while getkeystate(LBUTTON) or  getkeystate(RBUTTON) :
                 time.sleep(0.1)
             dkey.ReleaseKey(VK_J)
