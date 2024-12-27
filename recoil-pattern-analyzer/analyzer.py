@@ -1,9 +1,12 @@
+from pathlib import Path
+from collections import defaultdict
+
 import cv2
 import numpy as np
-import os
 
-# directoryの内の画像を対象にする
-directories = ["bulldog", "phantom", "vandal"]
+from _weapon import WeaponDetector, Weapon
+from _converter import Converter
+
 
 def apply_filter(img):
     """
@@ -19,8 +22,8 @@ def apply_filter(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # HSVのカラーフィルター範囲を設定
-    lower_bound = np.array([10, 60, 50])
-    upper_bound = np.array([20, 255, 100])
+    lower_bound = np.array([6, 30, 40])
+    upper_bound = np.array([60, 255, 80])
 
     # カラーフィルターを適用
     mask = cv2.inRange(hsv, lower_bound, upper_bound)
@@ -34,8 +37,8 @@ def apply_filter(img):
 
     # 指定された領域を1に設定
     region_mask[
-        center_y - 200:center_y + 10,  # y方向の範囲
-        center_x - 60:center_x + 60    # x方向の範囲
+        center_y - 240:center_y + 15,  # y方向の範囲
+        center_x - 60:center_x + 50    # x方向の範囲
     ] = 1
 
     # カラーフィルターとリージョンマスクを組み合わせる
@@ -79,45 +82,62 @@ def find_object_centers(mask, min_size=0):
             
             # 物体情報を追加
             objects_info.append((label, center_x, center_y))
-    
-    return debug_image, objects_info
+
+    # center_yが大きい順にソート
+    objects_info_sorted = sorted(objects_info, key=lambda x: x[2], reverse=True)
+
+    # ソート後の順番で番号を描画
+    for index, (label, center_x, center_y) in enumerate(objects_info_sorted):
+        # ラベル番号を描画
+        cv2.putText(debug_image, str(index + 1), (center_x + 20, center_y), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 128, 255), 1)
+
+    return debug_image, objects_info_sorted
 
 def process_images():
-    for dir_name in directories:
-        input_directory = os.path.join(os.getcwd(), dir_name)
-        if not os.path.exists(input_directory):
-            print(f"Directory {dir_name} not found")
+
+    # 直下のresourceディレクトリーからpathlibライブラリーで画像たち(.png, .jpg, .jpeg)を読み込み
+    images = []
+    for pattern in ['*.png', '*.jpg', '*.jpeg']:
+        images.extend(Path('resource').glob(pattern))
+
+    # 武器タイプごとに画像をグループ化
+    weapon_groups = defaultdict(list)
+    
+    # 最初に画像を武器タイプごとに分類
+    for image_path in images:
+        image = cv2.imread(str(image_path))
+        if image is None:
+            print(f"Failed to load image: {image_path}")
             continue
-
-        output_directory = os.path.join(os.getcwd(), f"{dir_name}_processed")
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
             
-        for filename in os.listdir(input_directory):
-            if filename.endswith(('.png', '.jpg', '.jpeg')):
-                image_path = os.path.join(input_directory, filename)
-                
-                img = cv2.imread(image_path)
-                if img is None:
-                    continue
+        weapon:Weapon = WeaponDetector.detect(image)
+        weapon_groups[weapon.value.name].append((image_path, image))
 
-                # フィルターを適用
-                final_mask = apply_filter(img)
+    for weapon_name, image_list in weapon_groups.items():
+        # 武器の種類に応じたディレクトリを作成
+        weapon_dir = Path(weapon_name)
+        weapon_dir.mkdir(exist_ok=True)
 
-                # 物体検出を実行
-                debug_image, objects_info = find_object_centers(final_mask)
+        # 各武器タイプ内で画像を処理
+        for idx, (image_path, image) in enumerate(image_list, 1):
+            # フィルター適用とオブジェクト検出
+            final_mask = apply_filter(image)
+            debug_image, objects_info = find_object_centers(final_mask)
+            
+            # オブジェクト情報を表示
+            for label, x, y in objects_info:
+                print(f"Object {label} center: ({x}, {y})")
 
-                # 検出結果を表示
-                for label, x, y in objects_info:
-                    print(f"Object {label} center: ({x}, {y})")
-
-                # 画像を保存
-                output_path = os.path.join(output_directory, filename)
-                debug_output_path = os.path.join(output_directory, f"debug_{filename}")
-                
-                cv2.imwrite(output_path, final_mask)
-                cv2.imwrite(debug_output_path, debug_image)
+            # 結果を保存
+            mask_path = weapon_dir / f"{idx}_mask.png"
+            debug_path = weapon_dir / f"{idx}_debug.png"
+            
+            cv2.imwrite(str(mask_path), final_mask)
+            cv2.imwrite(str(debug_path), debug_image)
+            
+            print(f"Processed {image_path.name} -> {weapon_name}/{idx}")
 
 
-# 関数を実行
-process_images()
+if __name__ == "__main__":
+    process_images()
