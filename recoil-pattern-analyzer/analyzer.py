@@ -94,6 +94,70 @@ def find_object_centers(mask, min_size=0):
 
     return debug_image, objects_info_sorted
 
+def calc_recoil_pattern(weapon_name: str, object_list: list[tuple]):
+    """
+    リコイルパターンを計算する関数
+    
+    Parameters:
+    weapon_name (str): 武器の名前
+    object_list (list[tuple]): オブジェクト情報のリスト [(label, x, y), ...]
+    
+    Returns:
+    tuple: (pixel_diffs, angle_diffs)
+        - pixel_diffs: ピクセル差分ベクトルのリスト [(dx, dy), ...]
+        - angle_diffs: 角度差分ベクトルのリスト [(d_yaw, d_pitch), ...]
+    """
+    if len(object_list) < 2:
+        return [], []
+
+    # ピクセル差分ベクトルを計算
+    pixel_diffs = []
+    for i in range(len(object_list) - 1):
+        _, x1, y1 = object_list[i]
+        _, x2, y2 = object_list[i + 1]
+        dx = x2 - x1
+        dy = y2 - y1
+        pixel_diffs.append((dx, dy))
+
+    # 角度差分ベクトルを計算
+    angle_diffs = []
+    for dx, dy in pixel_diffs:
+        d_yaw, d_pitch = Converter.convert_from_pixel_to_pitch_yaw(dx, dy)
+        angle_diffs.append((d_yaw, d_pitch))
+
+    return pixel_diffs, angle_diffs
+
+def save_text_of_recoil_pattern(weapon_name: str, pixel_diffs: list[tuple], angle_diffs: list[tuple]):
+    """
+    リコイルパターンのデータをテキストファイルとして保存する関数
+    
+    Parameters:
+    weapon_name (str): 武器の名前
+    pixel_diffs (list[tuple]): ピクセル差分ベクトルのリスト
+    angle_diffs (list[tuple]): 角度差分ベクトルのリスト
+    """
+    # 武器のディレクトリパスを作成
+    weapon_dir = Path(weapon_name)
+    
+    # ピクセル差分データを保存
+    pixel_file = weapon_dir / 'pixel_diffs.txt'
+    with open(pixel_file, 'w') as f:
+        f.write("Index\tdx\tdy\n")
+        for i, (dx, dy) in enumerate(pixel_diffs, 1):
+            f.write(f"{i}\t{dx}\t{dy}\n")
+
+    # 角度差分データを保存
+    angle_file = weapon_dir / 'angle_diffs.txt'
+    with open(angle_file, 'w') as f:
+        f.write("Index\td_yaw\td_pitch\n")
+        for i, (d_yaw, d_pitch) in enumerate(angle_diffs, 1):
+            f.write(f"{i}\t{d_yaw}\t{d_pitch}\n")
+
+    pitch_list_file = weapon_dir / 'pitch_list.txt'
+    with open(pitch_list_file, 'w') as f:
+        pitch_list = [d_pitch for _, d_pitch in angle_diffs]
+        f.write(str(pitch_list))
+
 def process_images():
 
     # 直下のresourceディレクトリーからpathlibライブラリーで画像たち(.png, .jpg, .jpeg)を読み込み
@@ -129,7 +193,9 @@ def process_images():
             for label, x, y in objects_info:
                 print(f"Object {label} center: ({x}, {y})")
 
-            # 結果を保存
+            pixel_diffs, angle_diffs = calc_recoil_pattern(weapon_name, objects_info)
+            save_text_of_recoil_pattern(weapon_name, pixel_diffs, angle_diffs)
+
             mask_path = weapon_dir / f"{idx}_mask.png"
             debug_path = weapon_dir / f"{idx}_debug.png"
             
