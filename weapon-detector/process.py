@@ -54,8 +54,8 @@ def main():
     
     # 武器画像の取得
     weapon_image_paths = Path("weapon-images-raw").glob("*.png")
-    output_dir_resized = Path("weapon-images-resized")
-    output_dir_resized.mkdir(exist_ok=True)
+    output_dir_trimming = Path("weapon-images-trimming")
+    output_dir_trimming.mkdir(exist_ok=True)
     output_dir_processed = Path("weapon-images-processed")
     output_dir_processed.mkdir(exist_ok=True)
 
@@ -83,7 +83,7 @@ def main():
                 image = resize(image, "primary")
 
         # リサイズ後の画像を保存
-        output_resized_path = output_dir_resized / f"{weapon_name}.png"
+        output_resized_path = output_dir_trimming / f"{weapon_name}.png"
         cv2.imwrite(str(output_resized_path), image)
         logging.info(f"Saved processed image to {output_resized_path}")
 
