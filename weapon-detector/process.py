@@ -4,13 +4,28 @@ from pathlib import Path
 import logging
 from weapon import Weapons, WeaponCategory
 
+
+RESOLUTION = "1920x1080"
+
+
 # HUD領域の設定
-x1, y1 = 2160, 916
-x2 = 2460
-h=52
-h2=48
-y2 = y1 +h +h2
-y3 = y2 +h +h2
+if RESOLUTION=="2560x1440" :
+    x1, y1 = 2160, 916
+    x2 = 2460
+    h = 52
+    h2 = 48
+    y2 = y1 +h +h2
+    y3 = y2 +h +h2
+
+elif RESOLUTION =="1920x1080" :
+    x1, y1 = 2160*3//4, 916*3//4
+    x2 = 2460*3//4
+    h = 40jj
+    h2 = 36
+    y2 = y1 +h +h2
+    y3 = y2 +h +h2
+else :
+    ValueError("RESOLUTIONの値が不正")
 
 # 領域の定義
 regions = {
@@ -53,7 +68,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     
     # 武器画像の取得
-    weapon_image_paths = Path("weapon-images-raw").glob("*.png")
+    weapon_image_paths = Path(RESOLUTION).glob("*.png")
     output_dir_trimming = Path("weapon-images-trimming")
     output_dir_trimming.mkdir(exist_ok=True)
     output_dir_processed = Path("weapon-images-processed")
