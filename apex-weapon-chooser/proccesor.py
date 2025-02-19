@@ -25,7 +25,7 @@ class ScreenSize:
 class Detector :
     def __init__(self, debug=False) :
         self.is_debug = debug
-        self._mor_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (40, 40))
+        self._mor_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (50, 50))
         
     def is_exist_yellow_in_mid(self, frame: Frame) -> bool:
         # 画面中央の領域を取得
@@ -54,8 +54,18 @@ class Detector :
         hsv_small = cv2.cvtColor(cropped_small, cv2.COLOR_BGR2HSV)
 
         # 黄色の閾値設定（例：Hue: 28-32, Saturation: 160-255, Value: 160-255）
-        lower = (28, 0, 222)
-        upper = (31, 255, 255)
+        lower = (50, 220, 220)
+        upper = (70, 255, 255)
+        """
+        RED_MIN_HSV = (-4, 160, 160)
+        RED_MAX_HSV = (4, 255, 255)
+
+        PURPLE_MIN_HSV = (145, 128, 128)
+        PURPLE_MAX_HSV = (155, 255, 255)
+
+        YELLOW_MIN_HSV = (29, 160, 160) # 160?
+        YELLOW_MAX_HSV = (31, 255, 255)
+        """
 
         # マスク生成
         mask_hsv_large = cv2.inRange(hsv_large, lower, upper)

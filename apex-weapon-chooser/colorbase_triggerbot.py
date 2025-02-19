@@ -36,7 +36,7 @@ def main() :
         window_name=None,
     )
 
-    detector = Detector(debug=False)
+    detector = Detector(debug=True)
 
     def on_frame_arrived(frame: Frame, capture_control: InternalCaptureControl) :
         with fps_limiter(target_fps=500, debug=True) :
@@ -44,7 +44,7 @@ def main() :
             and triggercheacker(frame.convert_to_bgr().frame_buffer)):
                 print("trigger")
                 dkey.PressKey(0x01)
-                time.sleep(0.1)
+                time.sleep(0.02)
                 dkey.ReleaseKey(0x01)
                 time.sleep(0.1)
 
